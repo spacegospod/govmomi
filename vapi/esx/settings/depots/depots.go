@@ -42,23 +42,75 @@ func NewManager(client *rest.Client) *Manager {
 	}
 }
 
+// SettingsDepotsOfflineSummary is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/Offline/Summary/
+type SettingsDepotsOfflineSummary struct {
+	Description string `json:"description"`
+	SourceType  string `json:"source_type"`
+	FileId      string `json:"file_id,omitempty"`
+	Location    string `json:"location,omitempty"`
+	Owner       string `json:"owner,omitempty"`
+	OwnerData   string `json:"owner_data,omitempty"`
+}
+
+// SettingsDepotsOfflineInfo is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/Offline/Info/
+type SettingsDepotsOfflineInfo struct {
+	CreateTime  string `json:"create_time"`
+	Description string `json:"description"`
+	SourceType  string `json:"source_type"`
+	FileId      string `json:"file_id,omitempty"`
+	Location    string `json:"location,omitempty"`
+	Owner       string `json:"owner,omitempty"`
+	OwnerData   string `json:"owner_data,omitempty"`
+}
+
+// SettingsDepotsOfflineCreateSpec is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/Offline/CreateSpec/
+type SettingsDepotsOfflineCreateSpec struct {
+	Description string `json:"description,omitempty"`
+	SourceType  string `json:"source_type"`
+	FileId      string `json:"file_id,omitempty"`
+	Location    string `json:"location,omitempty"`
+	OwnerData   string `json:"owner_data,omitempty"`
+}
+
+// SettingsDepotContentComponentsSummary is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/DepotContent/Components/Summary/
+type SettingsDepotContentComponentsSummary struct {
+	DisplayName string           `json:"display_name"`
+	Name        string           `json:"name"`
+	Vendor      string           `json:"vendor"`
+	Versions    []VersionSummary `json:"versions"`
+}
+
+// VersionSummary is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/DepotContent/Components/ComponentVersionSummary/
+type VersionSummary struct {
+	Category       string `json:"category"`
+	DisplayVersion string `json:"display_version"`
+	Kb             string `json:"kb"`
+	ReleaseDate    string `json:"release_date"`
+	Summary        string `json:"summary"`
+	Urgency        string `json:"urgency"`
+	Version        string `json:"version"`
+}
+
 // GetOfflineDepot retrieves an offline depot by its identifier
 // https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depots/offline/depot/get/
-func (c *Manager) GetOfflineDepot(depotId string) (map[string]interface{}, error) {
+func (c *Manager) GetOfflineDepot(depotId string) (SettingsDepotsOfflineSummary, error) {
 	path := c.Resource(DepotsOfflinePath).WithSubpath(depotId)
 	req := path.Request(http.MethodGet)
-	// TODO create bindings
-	var res map[string]interface{}
+	var res SettingsDepotsOfflineSummary
 	return res, c.Do(context.Background(), req, &res)
 }
 
 // GetOfflineDepots retrieves all offline depots
 // https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depots/offline/get/
-func (c *Manager) GetOfflineDepots() (map[string]interface{}, error) {
+func (c *Manager) GetOfflineDepots() (map[string]SettingsDepotsOfflineInfo, error) {
 	path := c.Resource(DepotsOfflinePath)
 	req := path.Request(http.MethodGet)
-	// TODO create bindings
-	var res map[string]interface{}
+	var res map[string]SettingsDepotsOfflineInfo
 	return res, c.Do(context.Background(), req, &res)
 }
 
@@ -67,24 +119,22 @@ func (c *Manager) GetOfflineDepots() (map[string]interface{}, error) {
 func (c *Manager) DeleteOfflineDepot(depotId string) (string, error) {
 	path := c.Resource(DepotsOfflinePath).WithSubpath(depotId).WithParam("vmw-task", "true")
 	req := path.Request(http.MethodDelete)
-	// TODO create bindings
 	var res string
 	return res, c.Do(context.Background(), req, &res)
 }
 
 // CreateOfflineDepot triggers a task to create an offline depot
 // https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depots/offlinevmw-tasktrue/post/
-func (c *Manager) CreateOfflineDepot(spec map[string]interface{}) (string, error) {
+func (c *Manager) CreateOfflineDepot(spec SettingsDepotsOfflineCreateSpec) (string, error) {
 	path := c.Resource(DepotsOfflinePath).WithParam("vmw-task", "true")
 	req := path.Request(http.MethodPost, spec)
-	// TODO create bindings
 	var res string
 	return res, c.Do(context.Background(), req, &res)
 }
 
 // GetDepotContentComponents retrieves the components in a depot
-// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depots/offlinevmw-tasktrue/post/
-func (c *Manager) GetDepotContentComponents(bundleTypes, names, vendors, versions *[]string, minVersion *string) ([]map[string]interface{}, error) {
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depot-content/components/get/
+func (c *Manager) GetDepotContentComponents(bundleTypes, names, vendors, versions *[]string, minVersion *string) ([]SettingsDepotContentComponentsSummary, error) {
 	addArrayParam := func(path *rest.Resource, name string, value *[]string) {
 		if value != nil && len(*value) > 0 {
 			path = path.WithParam(name, strings.Join(*value, ","))
@@ -100,7 +150,6 @@ func (c *Manager) GetDepotContentComponents(bundleTypes, names, vendors, version
 		path = path.WithParam("min_version", *minVersion)
 	}
 	req := path.Request(http.MethodGet)
-	// TODO create bindings
-	var res []map[string]interface{}
+	var res []SettingsDepotContentComponentsSummary
 	return res, c.Do(context.Background(), req, &res)
 }
