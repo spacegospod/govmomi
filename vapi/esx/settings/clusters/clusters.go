@@ -217,6 +217,24 @@ func (c *Manager) CommitSoftwareDraft(clusterId, draftId string, spec SettingsCl
 	return res, c.Do(context.Background(), req, &res)
 }
 
+// ListSoftwareDraftComponents returns all components in the specified draft
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/clusters/cluster/software/drafts/draft/software/components/get/
+func (c *Manager) ListSoftwareDraftComponents(clusterId, draftId string) (map[string]SettingsComponentInfo, error) {
+	path := c.Resource(fmt.Sprintf(SoftwareComponentsPath, clusterId, draftId))
+	req := path.Request(http.MethodGet)
+	var res map[string]SettingsComponentInfo
+	return res, c.Do(context.Background(), req, &res)
+}
+
+// GetSoftwareDraftComponent returns a component from the specified draft
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/clusters/cluster/software/drafts/draft/software/components/component/get/
+func (c *Manager) GetSoftwareDraftComponent(clusterId, draftId, component string) (SettingsComponentInfo, error) {
+	path := c.Resource(fmt.Sprintf(SoftwareComponentsPath, clusterId, draftId)).WithSubpath(component)
+	req := path.Request(http.MethodGet)
+	var res SettingsComponentInfo
+	return res, c.Do(context.Background(), req, &res)
+}
+
 // UpdateSoftwareDraftComponents updates the set of components in the specified draft
 // https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/clusters/cluster/software/drafts/draft/software/components/patch/
 func (c *Manager) UpdateSoftwareDraftComponents(clusterId, draftId string, spec SoftwareComponentsUpdateSpec) error {

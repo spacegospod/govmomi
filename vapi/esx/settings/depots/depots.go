@@ -18,16 +18,16 @@ package depots
 
 import (
 	"context"
+	"fmt"
 	"github.com/vmware/govmomi/vapi/rest"
 	"net/http"
-	"strings"
 )
 
 const (
 	// DepotsOfflinePath The endpoint for the offline depots API
 	DepotsOfflinePath = "/api/esx/settings/depots/offline"
-	// DepotContentComponentsPath The endpoint for retrieving the components in a depot
-	DepotContentComponentsPath = "/api/esx/settings/depot-content/components"
+	// DepotsOfflineContentPath The endpoint for retrieving the components in a depot
+	DepotsOfflineContentPath = DepotsOfflinePath + "/%s/content"
 )
 
 // Manager extends rest.Client, adding vLCM related methods.
@@ -41,6 +41,13 @@ func NewManager(client *rest.Client) *Manager {
 		Client: client,
 	}
 }
+
+type SourceType string
+
+const (
+	SourceTypePush = SourceType("PUSH")
+	SourceTypePull = SourceType("PULL")
+)
 
 // SettingsDepotsOfflineSummary is a type mapping for
 // https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/Offline/Summary/
@@ -75,25 +82,36 @@ type SettingsDepotsOfflineCreateSpec struct {
 	OwnerData   string `json:"owner_data,omitempty"`
 }
 
-// SettingsDepotContentComponentsSummary is a type mapping for
-// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/DepotContent/Components/Summary/
-type SettingsDepotContentComponentsSummary struct {
-	DisplayName string           `json:"display_name"`
-	Name        string           `json:"name"`
-	Vendor      string           `json:"vendor"`
-	Versions    []VersionSummary `json:"versions"`
+// SettingsDepotsComponentSummary is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/ComponentSummary/
+type SettingsDepotsComponentSummary struct {
+	DisplayName string             `json:"display_name"`
+	Versions    []ComponentVersion `json:"versions"`
 }
 
-// VersionSummary is a type mapping for
-// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/DepotContent/Components/ComponentVersionSummary/
-type VersionSummary struct {
-	Category       string `json:"category"`
+// ComponentVersion is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/ComponentVersion/
+type ComponentVersion struct {
 	DisplayVersion string `json:"display_version"`
-	Kb             string `json:"kb"`
-	ReleaseDate    string `json:"release_date"`
-	Summary        string `json:"summary"`
-	Urgency        string `json:"urgency"`
 	Version        string `json:"version"`
+}
+
+// SettingsDepotsMetadataInfo is a partial type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/MetadataInfo/
+type SettingsDepotsMetadataInfo struct {
+	Addons                map[string]interface{}                    `json:"addons,omitempty"`
+	BaseImages            []interface{}                             `json:"base_images,omitempty"`
+	FileName              string                                    `json:"file_name"`
+	HardwareSupport       map[string]interface{}                    `json:"hardware_support,omitempty"`
+	IndependentComponents map[string]SettingsDepotsComponentSummary `json:"independent_components,omitempty"`
+	Solutions             map[string]interface{}                    `json:"solutions,omitempty"`
+	Updates               map[string]interface{}                    `json:"updates,omitempty"`
+}
+
+// SettingsDepotsOfflineContentInfo is a type mapping for
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/data-structures/Settings/Depots/Offline/Content/Info/
+type SettingsDepotsOfflineContentInfo struct {
+	MetadataBundles map[string][]SettingsDepotsMetadataInfo `json:"metadata_bundles"`
 }
 
 // GetOfflineDepot retrieves an offline depot by its identifier
@@ -132,24 +150,11 @@ func (c *Manager) CreateOfflineDepot(spec SettingsDepotsOfflineCreateSpec) (stri
 	return res, c.Do(context.Background(), req, &res)
 }
 
-// GetDepotContentComponents retrieves the components in a depot
-// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depot-content/components/get/
-func (c *Manager) GetDepotContentComponents(bundleTypes, names, vendors, versions *[]string, minVersion *string) ([]SettingsDepotContentComponentsSummary, error) {
-	addArrayParam := func(path *rest.Resource, name string, value *[]string) {
-		if value != nil && len(*value) > 0 {
-			path = path.WithParam(name, strings.Join(*value, ","))
-		}
-	}
-	path := c.Resource(DepotContentComponentsPath)
-	addArrayParam(path, "bundle_types", bundleTypes)
-	addArrayParam(path, "names", names)
-	addArrayParam(path, "vendors", vendors)
-	addArrayParam(path, "versions", versions)
-
-	if minVersion != nil {
-		path = path.WithParam("min_version", *minVersion)
-	}
+// GetOfflineDepotContent retrieves the contents of a depot
+// https://developer.vmware.com/apis/vsphere-automation/latest/esx/api/esx/settings/depots/offline/depot/content/get/
+func (c *Manager) GetOfflineDepotContent(depotId string) (SettingsDepotsOfflineContentInfo, error) {
+	path := c.Resource(fmt.Sprintf(DepotsOfflineContentPath, depotId))
 	req := path.Request(http.MethodGet)
-	var res []SettingsDepotContentComponentsSummary
+	var res SettingsDepotsOfflineContentInfo
 	return res, c.Do(context.Background(), req, &res)
 }
